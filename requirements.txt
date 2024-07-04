@@ -1,0 +1,4 @@
+requests_to_curl==1.1.0
+toml==0.10.2
+omegaconf==2.3.0
+syrupy==4.0.8
