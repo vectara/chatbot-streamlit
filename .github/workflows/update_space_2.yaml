@@ -12,21 +12,29 @@ jobs:
     strategy:
       matrix:
         include:
-          - space_name: company-pet-policy
-            space_title: "Vectara Pet Policy"
-            space_description: "Ask questions about our unique pet policy"
+          - space_name: ask-starwars
+            space_title: "Ask Starwars"
+            space_description: "Ask questions about starwars scripts"
 
-          - space_name: about-mls
-            space_title: "About MLS"
-            space_description: "Ask questions from the MLS About section"
+          - space_name: langchain-docs
+            space_title: "About LangChain"
+            space_description: "Ask questions about LangChain based on its documentation"
 
-          - space_name: shakespeare
-            space_title: "Shakespeare and His Plays"
-            space_description: "Ask some basic questions about Shakespeare and his work"
+          - space_name: ask-anabel
+            space_title: "Ask Anabel"
+            space_description: "Ask SEL questions based on the works of Anabel Jensen"
 
-          - space_name: test
-            space_title: "Trivia Practice"
-            space_description: "Practice your trivia skills with Jeopardy questions"
+          - space_name: rare-disease
+            space_title: "Rare disease"
+            space_description: "Ask questions abour rare diseases based on PMC articles"
+
+          - space_name: irs-chat
+            space_title: "Ask IRS"
+            space_description: "Ask questions about taxes based on IRS website"
+
+          - space_name: legalaid
+            space_title: "Ask about LegalAid"
+            space_description: "Ask questions about Legal Aid in Illinois"
         
 
     steps:
