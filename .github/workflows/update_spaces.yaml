@@ -44,4 +44,6 @@ jobs:
       - name: Push changes to Hugging Face Space
         run: |
           cd $RUNNER_TEMP/spaces/${{ matrix.space_name }}
+          git remote set-url origin https://${{ secrets.HF_TOKEN }}@hf.co/spaces/vectara/${{ matrix.space_name }}.git          
           git push origin main
+          
