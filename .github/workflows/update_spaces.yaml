@@ -26,8 +26,10 @@ jobs:
           git config --global user.email 'github-actions@github.com'
           
       - name: Clone and Pull Target Hugging Face Repository
+        env:    
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git clone git@hf.co:spaces/david-oplatka/${{ matrix.space_name }}.git $RUNNER_TEMP/spaces/${{ matrix.space_name }}
+          git clone https://${HF_TOKEN}@hf.co:spaces/vectara/${{ matrix.space_name }}.git $RUNNER_TEMP/spaces/${{ matrix.space_name }}
       
       - name: Sync Source Repository with Temporary Folder
         run: |
@@ -46,5 +48,4 @@ jobs:
           HF_ACCESS_TOKEN: ${{ secrets.HF_TOKEN }}  # Replace with your actual secret name
         run: |
           cd $RUNNER_TEMP/spaces/${{ matrix.space_name }}
-          pwd
           git push origin main
