@@ -24,6 +24,8 @@ jobs:
         run: |
           git config --global user.name 'github-actions'
           git config --global user.email 'github-actions@github.com'
+          git config --global credential.helper store
+          echo "https://USER:${{ secrets.HF_TOKEN }}@huggingface.co" > ~/.git-credentials
           
       - name: Pull target repo, update and push back
         run: |
@@ -34,5 +36,7 @@ jobs:
           sed -i 's/short_description: "Enter Description Here"/short_description: ${{ matrix.space_description }}/g' README.md
           git add .
           git commit -m "Sync updates from source repository" || echo "No changes to commit"
+          echo "pushing"
+          pwd
           git push origin main
           
