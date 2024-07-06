@@ -73,10 +73,7 @@ class VectaraQuery():
 
         res = response.json()
 
-        #top_k = 10
         summary = res['responseSet'][0]['summary'][0]['text']
-        #responses = res['responseSet'][0]['response'][:top_k]
-        #docs = res['responseSet'][0]['document']
         chat = res['responseSet'][0]['summary'][0].get('chat', None)
 
         if chat and chat['status'] is not None:
