@@ -20,7 +20,7 @@ jobs:
             space_title: "Ask Starwars"
             space_description: "Ask questions about starwars scripts"
 
-          - space_name: langchain-docs
+          - space_name: ask-langchain
             space_title: "About LangChain"
             space_description: "Ask questions about LangChain based on its documentation"
 
@@ -28,11 +28,11 @@ jobs:
             space_title: "Rare disease"
             space_description: "Ask questions abour rare diseases based on PMC articles"
 
-          - space_name: irs-chat
+          - space_name: IRS-chat
             space_title: "Ask IRS"
             space_description: "Ask questions about taxes based on IRS website"
 
-          - space_name: legalaid
+          - space_name: legalaid-chat
             space_title: "Ask about LegalAid"
             space_description: "Ask questions about Legal Aid in Illinois"
 
