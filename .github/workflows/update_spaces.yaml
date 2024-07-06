@@ -38,7 +38,7 @@ jobs:
 
           - space_name: physics-bot
             space_title: "Ask about Physics"
-            space_description: "Ask physics questions based on the lecture notes of Richard Feynman" 
+            space_description: "Based on notes lectures by Richard Feynman" 
 
     steps:
       - name: Checkout Source Repository
