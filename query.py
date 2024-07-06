@@ -62,7 +62,7 @@ class VectaraQuery():
 
     def get_body(self, query_str: str):
         corpora_key_list = [{
-                'customer_id': self.customer_id, 'corpus_id': corpus_id, 'lexical_interpolation_config': {'lambda': 0.025}
+                'customer_id': self.customer_id, 'corpus_id': corpus_id, 'lexical_interpolation_config': {'lambda': 0.005}
             } for corpus_id in self.corpus_ids
         ]
 
@@ -81,7 +81,7 @@ class VectaraQuery():
                     },
                     'rerankingConfig':
                     {
-                        'rerankerId': 272725718,
+                        'rerankerId': 272725719,
                         'mmrConfig': {
                             'diversityBias': 0.3
                         }
@@ -89,7 +89,7 @@ class VectaraQuery():
                     'summary': [
                         {
                             'responseLang': 'eng',
-                            'maxSummarizedResults': 5,
+                            'maxSummarizedResults': 10,
                             'summarizerPromptName': self.prompt_name,
                             'chat': {
                                 'store': True,
