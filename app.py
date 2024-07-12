@@ -84,18 +84,6 @@ def launch_bot():
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.write(prompt)
-
-    # Example prompt
-    for i, example in enumerate(example_messages):
-        button_pressed = False
-        with ex_cols[i]:
-            if st.button(example):
-                st.session_state.ex_prompt = example
-
-        if button_pressed:
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            with st.chat_message("user"):
-                st.write(prompt)
                 
     # Generate a new response if last message is not from assistant
     if st.session_state.messages[-1]["role"] != "assistant":
