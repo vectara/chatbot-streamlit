@@ -29,7 +29,8 @@ def launch_bot():
             'description': os.environ['description'],
             'source_data_desc': os.environ['source_data_desc'],
             'streaming': isTrue(os.environ.get('streaming', False)),
-            'prompt_name': os.environ.get('prompt_name', None)
+            'prompt_name': os.environ.get('prompt_name', None),
+            'examples': os.environ.get('examples', '')
         })
         st.session_state.cfg = cfg
         st.session_state.vq = VectaraQuery(cfg.api_key, cfg.customer_id, cfg.corpus_ids, cfg.prompt_name)
@@ -60,6 +61,12 @@ def launch_bot():
     if "messages" not in st.session_state.keys():
         st.session_state.messages = [{"role": "assistant", "content": "How may I help you?"}]
 
+    example_messages = [example.strip() for example in cfg.examples.split(",")]
+    example_messages = [em for em in example_messages if len(em)>0]
+    if len(example_messages) > 0:
+        st.markdown("<h6>Queries To Try:</h6>", unsafe_allow_html=True)
+        ex_cols = st.columns(4)
+        
     # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
@@ -70,7 +77,20 @@ def launch_bot():
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.write(prompt)
-    
+
+    # Example prompt
+    for i, example in enumerate(example_messages):
+        button_pressed = False
+        with ex_cols[i]:
+            if st.button(example):
+                prompt = example
+                button_pressed = True
+
+        if button_pressed:
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.write(prompt)
+                
     # Generate a new response if last message is not from assistant
     if st.session_state.messages[-1]["role"] != "assistant":
         with st.chat_message("assistant"):
