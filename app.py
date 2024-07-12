@@ -33,6 +33,7 @@ def launch_bot():
             'examples': os.environ.get('examples', '')
         })
         st.session_state.cfg = cfg
+        st.session_state.ex_prompt = None
         st.session_state.vq = VectaraQuery(cfg.api_key, cfg.customer_id, cfg.corpus_ids, cfg.prompt_name)
 
     cfg = st.session_state.cfg
@@ -61,11 +62,12 @@ def launch_bot():
     if "messages" not in st.session_state.keys():
         st.session_state.messages = [{"role": "assistant", "content": "How may I help you?"}]
 
+    max_examples = 4
     example_messages = [example.strip() for example in cfg.examples.split(",")]
-    example_messages = [em for em in example_messages if len(em)>0]
+    example_messages = [em for em in example_messages if len(em)>0][:max_examples]
     if len(example_messages) > 0:
         st.markdown("<h6>Queries To Try:</h6>", unsafe_allow_html=True)
-        ex_cols = st.columns(4)
+        ex_cols = st.columns(max_examples)
         
     # Display chat messages
     for message in st.session_state.messages:
@@ -73,7 +75,12 @@ def launch_bot():
             st.write(message["content"])
 
     # User-provided prompt
-    if prompt := st.chat_input():
+    if st.session_state.ex_prompt:
+        prompt = st.session_state.ex_prompt
+        st.session_state.ex_prompt = None
+    else:
+        prompt = st.chat_input()
+    if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.write(prompt)
@@ -83,8 +90,7 @@ def launch_bot():
         button_pressed = False
         with ex_cols[i]:
             if st.button(example):
-                prompt = example
-                button_pressed = True
+                st.session_state.ex_prompt = example
 
         if button_pressed:
             st.session_state.messages.append({"role": "user", "content": prompt})
