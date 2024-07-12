@@ -68,7 +68,11 @@ def launch_bot():
     if len(example_messages) > 0:
         st.markdown("<h6>Queries To Try:</h6>", unsafe_allow_html=True)
         ex_cols = st.columns(max_examples)
-        
+    for i, example in enumerate(example_messages):
+        with ex_cols[i]:
+            if st.button(example):
+                st.session_state.ex_prompt = example
+                
     # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
