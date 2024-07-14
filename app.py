@@ -5,6 +5,8 @@ import os
 import streamlit as st
 from PIL import Image
 
+max_examples = 4
+ 
 def isTrue(x) -> bool:
     if isinstance(x, bool):
         return x
@@ -19,6 +21,18 @@ def launch_bot():
         response = vq.submit_query_streaming(question)
         return response
 
+    def show_example_questions():
+        if len(st.session_state.example_messages) > 0 and st.session_state.first_turn:
+            st.markdown("<h6>Queries To Try:</h6>", unsafe_allow_html=True)
+            ex_cols = st.columns(max_examples)
+            for i, example in enumerate(st.session_state.example_messages):
+                with ex_cols[i]:
+                    if st.button(example, key=f"example_{i}"):
+                        st.session_state.ex_prompt = example
+                        st.session_state.first_turn = False
+                        return True
+        return False
+    
     if 'cfg' not in st.session_state:
         corpus_ids = str(os.environ['corpus_ids']).split(',')
         cfg = OmegaConf.create({
@@ -34,6 +48,10 @@ def launch_bot():
         })
         st.session_state.cfg = cfg
         st.session_state.ex_prompt = None
+        st.session_state.first_turn = True        
+        example_messages = [example.strip() for example in cfg.examples.split(",")]
+        st.session_state.example_messages = [em for em in example_messages if len(em)>0][:max_examples]
+
         st.session_state.vq = VectaraQuery(cfg.api_key, cfg.customer_id, cfg.corpus_ids, cfg.prompt_name)
 
     cfg = st.session_state.cfg
@@ -62,33 +80,29 @@ def launch_bot():
     if "messages" not in st.session_state.keys():
         st.session_state.messages = [{"role": "assistant", "content": "How may I help you?"}]
 
-    max_examples = 4
-    example_messages = [example.strip() for example in cfg.examples.split(",")]
-    example_messages = [em for em in example_messages if len(em)>0][:max_examples]
-    if len(example_messages) > 0:
-        st.markdown("<h6>Queries To Try:</h6>", unsafe_allow_html=True)
-        ex_cols = st.columns(max_examples)
-    for i, example in enumerate(example_messages):
-        with ex_cols[i]:
-            if st.button(example):
-                st.session_state.ex_prompt = example
+
+    example_container = st.empty()
+    with example_container:
+        if show_example_questions():
+            example_container.empty()
+            st.rerun()
                 
     # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.write(message["content"])
 
-    # User-provided prompt
+    # select prompt from example question or user provided input
     if st.session_state.ex_prompt:
         prompt = st.session_state.ex_prompt
-        st.session_state.ex_prompt = None
     else:
         prompt = st.chat_input()
     if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.write(prompt)
-                
+        st.session_state.ex_prompt = None
+        
     # Generate a new response if last message is not from assistant
     if st.session_state.messages[-1]["role"] != "assistant":
         with st.chat_message("assistant"):
@@ -101,6 +115,7 @@ def launch_bot():
                     st.write(response)
             message = {"role": "assistant", "content": response}
             st.session_state.messages.append(message)
+            st.rerun()
     
 if __name__ == "__main__":
     launch_bot()
