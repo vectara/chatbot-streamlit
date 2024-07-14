@@ -3,6 +3,8 @@ from query import VectaraQuery
 import os
 
 import streamlit as st
+from streamlit_pills import pills
+
 from PIL import Image
 
 max_examples = 4
@@ -21,18 +23,15 @@ def launch_bot():
         response = vq.submit_query_streaming(question)
         return response
 
-    def show_example_questions():
-        if len(st.session_state.example_messages) > 0 and st.session_state.first_turn:
-            st.markdown("<h6>Queries To Try:</h6>", unsafe_allow_html=True)
-            ex_cols = st.columns(max_examples)
-            for i, example in enumerate(st.session_state.example_messages):
-                with ex_cols[i]:
-                    if st.button(example, key=f"example_{i}"):
-                        st.session_state.ex_prompt = example
-                        st.session_state.first_turn = False
-                        return True
+    def show_example_questions():        
+        if len(st.session_state.example_messages) > 0 and st.session_state.first_turn:            
+            selected_example = pills("Queries to Try:", st.session_state.example_messages, index=None)
+            if selected_example:
+                st.session_state.ex_prompt = selected_example
+                st.session_state.first_turn = False
+                return True
         return False
-    
+        
     if 'cfg' not in st.session_state:
         corpus_ids = str(os.environ['corpus_ids']).split(',')
         cfg = OmegaConf.create({
