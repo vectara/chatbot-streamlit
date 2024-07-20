@@ -3,52 +3,54 @@ import json
 
 
 class VectaraQuery():
-    def __init__(self, api_key: str, customer_id: str, corpus_ids: list[str], prompt_name: str = None):
-        self.customer_id = customer_id
-        self.corpus_ids = corpus_ids
+    def __init__(self, api_key: str, corpus_keys: list[str], prompt_name: str = None):
+        self.corpus_keys = corpus_keys
         self.api_key = api_key
-        self.prompt_name = prompt_name if prompt_name else "vectara-experimental-summary-ext-2023-12-11-sml"
+        self.prompt_name = prompt_name if prompt_name else "vectara-summary-ext-24-05-sml"
         self.conv_id = None
 
-    def get_body(self, query_str: str):
-        corpora_key_list = [{
-                'customer_id': self.customer_id, 'corpus_id': corpus_id, 'lexical_interpolation_config': {'lambda': 0.005}
-            } for corpus_id in self.corpus_ids
+    
+    def get_body(self, query_str: str, stream: False):
+        corpora_list = [{
+                'corpus_key': corpus_key, 'lexical_interpolation': 0.005
+            } for corpus_key in self.corpus_keys
         ]
 
         return {
-            'query': [
-                { 
-                    'query': query_str,
-                    'start': 0,
-                    'numResults': 50,
-                    'corpusKey': corpora_key_list,
-                    'context_config': {
-                        'sentences_before': 2,
-                        'sentences_after': 2,
-                        'start_tag': "%START_SNIPPET%",
-                        'end_tag': "%END_SNIPPET%",
-                    },
-                    'rerankingConfig':
-                    {
-                        'rerankerId': 272725719,
-                    },
-                    'summary': [
-                        {
-                            'responseLang': 'eng',
-                            'maxSummarizedResults': 10,
-                            'summarizerPromptName': self.prompt_name,
-                            'chat': {
-                                'store': True,
-                                'conversationId': self.conv_id
-                            },
-                            'citationParams': {
-                                "style": "NONE",
-                            }
-                        }
-                    ]
-                } 
-            ]
+            'query': query_str,
+            'search':
+            {
+                'corpora': corpora_list,
+                'offset': 0,
+                'limit': 50,
+                'context_configuration':
+                {
+                    'sentences_before': 2,
+                    'sentences_after': 2,
+                    'start_tag': "%START_SNIPPET%",
+                    'end_tag': "%END_SNIPPET%",
+                },
+                'reranker':
+                {
+                    'type': 'customer_reranker',
+		        'reranker_id': 'rnk_272725719'
+                },
+            },
+            'generation':
+            {
+                'prompt_name': self.prompt_name,
+                'max_used_search_results': 10,
+                'response_language': 'eng',
+                'citations':
+                {
+                    'style': 'none'
+                }
+            },
+            'chat':
+            {
+                'store': True
+            },
+            'stream_response': stream
         }
     
 
@@ -56,76 +58,71 @@ class VectaraQuery():
         return {
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "customer-id": self.customer_id,
+            "x-api-key": self.api_key,
+            "grpc-timeout": "60S"
+        }
+    
+    def get_stream_headers(self):
+        return {
+            "Content-Type": "application/json",
+            "Accept": "text/event-stream",
             "x-api-key": self.api_key,
             "grpc-timeout": "60S"
         }
 
     def submit_query(self, query_str: str):
 
-        endpoint = f"https://api.vectara.io/v1/query"
-        body = self.get_body(query_str)
+        if self.conv_id:
+            endpoint = f"https://api.vectara.io/v2/chats/{self.conv_id}/turns"
+        else:
+            endpoint = "https://api.vectara.io/v2/chats"
 
-        response = requests.post(endpoint, data=json.dumps(body), verify=True, headers=self.get_headers())    
+        body = self.get_body(query_str, stream=False)
+
+        response = requests.post(endpoint, data=json.dumps(body), verify=True, headers=self.get_headers())
+
         if response.status_code != 200:
             print(f"Query failed with code {response.status_code}, reason {response.reason}, text {response.text}")
+            if response.status_code == 429:
+                return "Sorry, Vectara chat turns exceeds plan limit."
             return "Sorry, something went wrong in my brain. Please try again later."
 
         res = response.json()
 
-        summary = res['responseSet'][0]['summary'][0]['text']
-        chat = res['responseSet'][0]['summary'][0].get('chat', None)
+        if self.conv_id is None:
+            self.conv_id = res['chat_id']
 
-        if chat and chat['status'] is not None:
-            st_code = chat['status']
-            print(f"Chat query failed with code {st_code}")
-            if st_code == 'RESOURCE_EXHAUSTED':
-                self.conv_id = None
-                return 'Sorry, Vectara chat turns exceeds plan limit.'
-            return 'Sorry, something went wrong in my brain. Please try again later.'
+        summary = res['answer']
         
-        self.conv_id = chat['conversationId'] if chat else None
         return summary
 
     def submit_query_streaming(self, query_str: str):
 
-        endpoint = "https://api.vectara.io/v1/stream-query"
-        body = self.get_body(query_str)
+        if self.conv_id:
+            endpoint = f"https://api.vectara.io/v2/chats/{self.conv_id}/turns"
+        else:
+            endpoint = "https://api.vectara.io/v2/chats"
 
-        response = requests.post(endpoint, data=json.dumps(body), verify=True, headers=self.get_headers(), stream=True) 
+        body = self.get_body(query_str, stream=True)
+
+        response = requests.post(endpoint, data=json.dumps(body), verify=True, headers=self.get_stream_headers(), stream=True) 
+
         if response.status_code != 200:
             print(f"Query failed with code {response.status_code}, reason {response.reason}, text {response.text}")
-            return "Sorry, something went wrong in my brain. Please try again later."
+            if response.status_code == 429:
+                return "Sorry, Vectara chat turns exceeds plan limit."
+            return "Sorry, something went wrong in my brain. Please try again later."        
 
         chunks = []
         for line in response.iter_lines():
+            line = line.decode('utf-8')
             if line:  # filter out keep-alive new lines
-                data = json.loads(line.decode('utf-8'))
-                res = data['result']
-                response_set = res['responseSet']                
-                if response_set is None:
-                    # grab next chunk and yield it as output
-                    summary = res.get('summary', None)
-                    if summary is None or len(summary)==0:
-                        continue
-                    else:
-                        chat = summary.get('chat', None)
-                        if chat and chat.get('status', None):
-                            st_code = chat['status']
-                            print(f"Chat query failed with code {st_code}")
-                            if st_code == 'RESOURCE_EXHAUSTED':
-                                self.conv_id = None
-                                return 'Sorry, Vectara chat turns exceeds plan limit.'
-                            return 'Sorry, something went wrong in my brain. Please try again later.'
-                        conv_id = chat.get('conversationId', None) if chat else None
-                        if conv_id:
-                            self.conv_id = conv_id
-                        
-                    chunk = summary['text']
-                    chunks.append(chunk)
-                    yield chunk
+                key, value = line.split(':', 1)
+                if key == 'data':
+                    line = json.loads(value)
+                    if line['type'] == 'generation_chunk':
+                        chunk = line['generation_chunk']
+                        chunks.append(chunk)
+                        yield chunk
 
-                    if summary['done']:
-                        break
-        
         return ''.join(chunks)
