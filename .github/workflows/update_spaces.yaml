@@ -12,10 +12,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - space_name: ask-anabel
-            space_title: "Ask Anabel"
-            space_description: "Ask SEL questions based on the works of Anabel Jensen"        
-
           - space_name: starwars-chat
             space_title: "Ask Starwars"
             space_description: "Ask questions about starwars scripts"
