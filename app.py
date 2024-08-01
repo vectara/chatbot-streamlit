@@ -1,13 +1,59 @@
 from omegaconf import OmegaConf
 from query import VectaraQuery
 import os
+import requests
+import json
+import uuid
 
 import streamlit as st
 from streamlit_pills import pills
+from streamlit_feedback import streamlit_feedback
 
 from PIL import Image
 
 max_examples = 6
+languages = {'English': 'eng', 'Spanish': 'spa', 'French': 'frs', 'Chinese': 'zho', 'German': 'deu', 'Hindi': 'hin', 'Arabic': 'ara',
+             'Portuguese': 'por', 'Italian': 'ita', 'Japanese': 'jpn', 'Korean': 'kor', 'Russian': 'rus', 'Turkish': 'tur', 'Persian (Farsi)': 'fas',
+             'Vietnamese': 'vie', 'Thai': 'tha', 'Hebrew': 'heb', 'Dutch': 'nld', 'Indonesian': 'ind', 'Polish': 'pol', 'Ukrainian': 'ukr',
+             'Romanian': 'ron', 'Swedish': 'swe', 'Czech': 'ces', 'Greek': 'ell', 'Bengali': 'ben', 'Malay (or Malaysian)': 'msa', 'Urdu': 'urd'}
+
+# Setup for HTTP API Calls to Amplitude Analytics
+if 'device_id' not in st.session_state:
+    st.session_state.device_id = str(uuid.uuid4())
+
+headers = {
+    'Content-Type': 'application/json',
+    'Accept': '*/*'
+}
+amp_api_key = os.getenv('AMPLITUDE_TOKEN')
+
+def thumbs_feedback(feedback, **kwargs):
+    """
+    Sends feedback to Amplitude Analytics
+    """
+    data = {
+            "api_key": amp_api_key,
+            "events": [{
+                "device_id": st.session_state.device_id,
+                "event_type": "provided_feedback",
+                "event_properties": {
+                    "Space Name": kwargs.get("title", "Unknown Space Name"),
+                    "Demo Type": "Chat bot",
+                    "query": kwargs.get("prompt", "No user input"),
+                    "response": kwargs.get("response", "No chat response"),
+                    "feedback": feedback["score"],
+                    "Response Language": st.session_state.language
+                }
+            }]
+        }
+    response = requests.post('https://api2.amplitude.com/2/httpapi', headers=headers, data=json.dumps(data))
+    if response.status_code != 200:
+        print(f"Request failed with status code {response.status_code}. Response Text: {response.text}")
+    
+    st.session_state.feedback_key += 1
+
+if "feedback_key" not in st.session_state:
+        st.session_state.feedback_key = 0
 
 def isTrue(x) -> bool:
     if isinstance(x, bool):
@@ -16,11 +62,11 @@ def isTrue(x) -> bool:
 
 def launch_bot():
     def generate_response(question):
-        response = vq.submit_query(question)
+        response = vq.submit_query(question, languages[st.session_state.language])
         return response
     
     def generate_streaming_response(question):
-        response = vq.submit_query_streaming(question)
+        response = vq.submit_query_streaming(question, languages[st.session_state.language])
         return response
     
     def show_example_questions():        
@@ -41,11 +87,13 @@ def launch_bot():
             'source_data_desc': os.environ['source_data_desc'],
             'streaming': isTrue(os.environ.get('streaming', False)),
             'prompt_name': os.environ.get('prompt_name', None),
-            'examples': os.environ.get('examples', None)
+            'examples': os.environ.get('examples', None),
+            'language': 'English'
         })
         st.session_state.cfg = cfg
         st.session_state.ex_prompt = None
-        st.session_state.first_turn = True        
+        st.session_state.first_turn = True
+        st.session_state.language = cfg.language
         example_messages = [example.strip() for example in cfg.examples.split(",")]
         st.session_state.example_messages = [em for em in example_messages if len(em)>0][:max_examples]
         
@@ -60,7 +108,13 @@ def launch_bot():
         image = Image.open('Vectara-logo.png')
         st.image(image, width=175)
         st.markdown(f"## About\n\n"
-                    f"This demo uses Retrieval Augmented Generation to ask questions about {cfg.source_data_desc}\n\n")
+                    f"This demo uses Retrieval Augmented Generation to ask questions about {cfg.source_data_desc}\n")
+        
+        cfg.language = st.selectbox('Language:', languages.keys())
+        if st.session_state.language != cfg.language:
+            st.session_state.language = cfg.language
+            print(f"DEBUG: Language changed to {st.session_state.language}")
+            st.rerun()
 
         st.markdown("---")
         st.markdown(
@@ -111,7 +165,32 @@ def launch_bot():
                     st.write(response)
             message = {"role": "assistant", "content": response}
             st.session_state.messages.append(message)
+
+            # Send query and response to Amplitude Analytics
+            data = {
+                "api_key": amp_api_key,
+                "events": [{
+                    "device_id": st.session_state.device_id,
+                    "event_type": "submitted_query",
+                    "event_properties": {
+                        "Space Name": cfg["title"],
+                        "Demo Type": "Chat bot",
+                        "query": st.session_state.messages[-2]["content"],
+                        "response": st.session_state.messages[-1]["content"],
+                        "Response Language": st.session_state.language
+                    }
+                }]
+            }
+            response = requests.post('https://api2.amplitude.com/2/httpapi', headers=headers, data=json.dumps(data))
+            if response.status_code != 200:
+                print(f"Request failed with status code {response.status_code}. Response Text: {response.text}")
             st.rerun()
+
+    if (st.session_state.messages[-1]["role"] == "assistant") & (st.session_state.messages[-1]["content"] != "How may I help you?"):
+        streamlit_feedback(feedback_type="thumbs", on_submit = thumbs_feedback, key = st.session_state.feedback_key,
+                                      kwargs = {"prompt": st.session_state.messages[-2]["content"],
+                                                "response": st.session_state.messages[-1]["content"],
+                                                "title": cfg["title"]})
     
 if __name__ == "__main__":
     launch_bot()

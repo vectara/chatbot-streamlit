@@ -10,7 +10,7 @@ class VectaraQuery():
         self.conv_id = None
 
     
-    def get_body(self, query_str: str, stream: False):
+    def get_body(self, query_str: str, response_lang: str, stream: False):
         corpora_list = [{
                 'corpus_key': corpus_key, 'lexical_interpolation': 0.005
             } for corpus_key in self.corpus_keys
@@ -40,11 +40,12 @@ class VectaraQuery():
             {
                 'prompt_name': self.prompt_name,
                 'max_used_search_results': 10,
-                'response_language': 'eng',
+                'response_language': response_lang,
                 'citations':
                 {
                     'style': 'none'
-                }
+                },
+                'enable_factual_consistency_score': False
             },
             'chat':
             {
@@ -70,14 +71,14 @@ class VectaraQuery():
             "grpc-timeout": "60S"
         }
 
-    def submit_query(self, query_str: str):
+    def submit_query(self, query_str: str, language: str):
 
         if self.conv_id:
             endpoint = f"https://api.vectara.io/v2/chats/{self.conv_id}/turns"
         else:
             endpoint = "https://api.vectara.io/v2/chats"
 
-        body = self.get_body(query_str, stream=False)
+        body = self.get_body(query_str, language, stream=False)
 
         response = requests.post(endpoint, data=json.dumps(body), verify=True, headers=self.get_headers())
 
@@ -96,14 +97,14 @@ class VectaraQuery():
         
         return summary
 
-    def submit_query_streaming(self, query_str: str):
+    def submit_query_streaming(self, query_str: str, language: str):
 
         if self.conv_id:
             endpoint = f"https://api.vectara.io/v2/chats/{self.conv_id}/turns"
         else:
             endpoint = "https://api.vectara.io/v2/chats"
 
-        body = self.get_body(query_str, stream=True)
+        body = self.get_body(query_str, language, stream=True)
 
         response = requests.post(endpoint, data=json.dumps(body), verify=True, headers=self.get_stream_headers(), stream=True) 
 
