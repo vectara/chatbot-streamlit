@@ -38,7 +38,7 @@ def thumbs_feedback(feedback, **kwargs):
                 "event_type": "provided_feedback",
                 "event_properties": {
                     "Space Name": kwargs.get("title", "Unknown Space Name"),
-                    "Demo Type": "Chat bot",
+                    "Demo Type": "chatbot",
                     "query": kwargs.get("prompt", "No user input"),
                     "response": kwargs.get("response", "No chat response"),
                     "feedback": feedback["score"],
@@ -174,7 +174,7 @@ def launch_bot():
                     "event_type": "submitted_query",
                     "event_properties": {
                         "Space Name": cfg["title"],
-                        "Demo Type": "Chat bot",
+                        "Demo Type": "chatbot",
                         "query": st.session_state.messages[-2]["content"],
                         "response": st.session_state.messages[-1]["content"],
                         "Response Language": st.session_state.language
