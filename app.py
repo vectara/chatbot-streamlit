@@ -183,7 +183,7 @@ def launch_bot():
             }
             response = requests.post('https://api2.amplitude.com/2/httpapi', headers=headers, data=json.dumps(data))
             if response.status_code != 200:
-                print(f"Request failed with status code {response.status_code}. Response Text: {response.text}")
+                print(f"Amplitude request failed with status code {response.status_code}. Response Text: {response.text}")
             st.rerun()
 
     if (st.session_state.messages[-1]["role"] == "assistant") & (st.session_state.messages[-1]["content"] != "How may I help you?"):
