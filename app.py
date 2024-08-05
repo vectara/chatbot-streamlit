@@ -1,18 +1,18 @@
 from omegaconf import OmegaConf
 from query import VectaraQuery
 import os
-import requests
-import json
+from PIL import Image
 import uuid
 
 import streamlit as st
 from streamlit_pills import pills
 from streamlit_feedback import streamlit_feedback
 
-from PIL import Image
+from utils import thumbs_feedback, send_amplitude_data
+
 
 max_examples = 6
-languages = {'English': 'eng', 'Spanish': 'spa', 'French': 'frs', 'Chinese': 'zho', 'German': 'deu', 'Hindi': 'hin', 'Arabic': 'ara',
+languages = {'English': 'eng', 'Spanish': 'spa', 'French': 'fra', 'Chinese': 'zho', 'German': 'deu', 'Hindi': 'hin', 'Arabic': 'ara',
              'Portuguese': 'por', 'Italian': 'ita', 'Japanese': 'jpn', 'Korean': 'kor', 'Russian': 'rus', 'Turkish': 'tur', 'Persian (Farsi)': 'fas',
              'Vietnamese': 'vie', 'Thai': 'tha', 'Hebrew': 'heb', 'Dutch': 'nld', 'Indonesian': 'ind', 'Polish': 'pol', 'Ukrainian': 'ukr',
              'Romanian': 'ron', 'Swedish': 'swe', 'Czech': 'ces', 'Greek': 'ell', 'Bengali': 'ben', 'Malay (or Malaysian)': 'msa', 'Urdu': 'urd'}
@@ -21,36 +21,6 @@ languages = {'English': 'eng', 'Spanish': 'spa', 'French': 'frs', 'Chinese': 'zh
 if 'device_id' not in st.session_state:
     st.session_state.device_id = str(uuid.uuid4())
 
-headers = {
-    'Content-Type': 'application/json',
-    'Accept': '*/*'
-}
-amp_api_key = os.getenv('AMPLITUDE_TOKEN')
-
-def thumbs_feedback(feedback, **kwargs):
-    """
-    Sends feedback to Amplitude Analytics
-    """
-    data = {
-            "api_key": amp_api_key,
-            "events": [{
-                "device_id": st.session_state.device_id,
-                "event_type": "provided_feedback",
-                "event_properties": {
-                    "Space Name": kwargs.get("title", "Unknown Space Name"),
-                    "Demo Type": "chatbot",
-                    "query": kwargs.get("prompt", "No user input"),
-                    "response": kwargs.get("response", "No chat response"),
-                    "feedback": feedback["score"],
-                    "Response Language": st.session_state.language
-                }
-            }]
-        }
-    response = requests.post('https://api2.amplitude.com/2/httpapi', headers=headers, data=json.dumps(data))
-    if response.status_code != 200:
-        print(f"Request failed with status code {response.status_code}. Response Text: {response.text}")
-    
-    st.session_state.feedback_key += 1
 
 if "feedback_key" not in st.session_state:
         st.session_state.feedback_key = 0
@@ -157,7 +127,7 @@ def launch_bot():
     if st.session_state.messages[-1]["role"] != "assistant":
         with st.chat_message("assistant"):
             if cfg.streaming:
-                stream = generate_streaming_response(prompt) 
+                stream = generate_streaming_response(prompt)
                 response = st.write_stream(stream) 
             else:
                 with st.spinner("Thinking..."):
@@ -167,30 +137,20 @@ def launch_bot():
             st.session_state.messages.append(message)
 
             # Send query and response to Amplitude Analytics
-            data = {
-                "api_key": amp_api_key,
-                "events": [{
-                    "device_id": st.session_state.device_id,
-                    "event_type": "submitted_query",
-                    "event_properties": {
-                        "Space Name": cfg["title"],
-                        "Demo Type": "chatbot",
-                        "query": st.session_state.messages[-2]["content"],
-                        "response": st.session_state.messages[-1]["content"],
-                        "Response Language": st.session_state.language
-                    }
-                }]
-            }
-            response = requests.post('https://api2.amplitude.com/2/httpapi', headers=headers, data=json.dumps(data))
-            if response.status_code != 200:
-                print(f"Amplitude request failed with status code {response.status_code}. Response Text: {response.text}")
+            send_amplitude_data(
+                user_query=st.session_state.messages[-2]["content"],
+                chat_response=st.session_state.messages[-1]["content"],
+                demo_name=cfg["title"],
+                language=st.session_state.language
+            )
             st.rerun()
 
     if (st.session_state.messages[-1]["role"] == "assistant") & (st.session_state.messages[-1]["content"] != "How may I help you?"):
         streamlit_feedback(feedback_type="thumbs", on_submit = thumbs_feedback, key = st.session_state.feedback_key,
-                                      kwargs = {"prompt": st.session_state.messages[-2]["content"],
-                                                "response": st.session_state.messages[-1]["content"],
-                                                "title": cfg["title"]})
+                                      kwargs = {"user_query": st.session_state.messages[-2]["content"],
+                                                "chat_response": st.session_state.messages[-1]["content"],
+                                                "demo_name": cfg["title"],
+                                                "response_language": st.session_state.language})
     
 if __name__ == "__main__":
     launch_bot()
