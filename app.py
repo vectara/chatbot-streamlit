@@ -8,7 +8,7 @@ import streamlit as st
 from streamlit_pills import pills
 from streamlit_feedback import streamlit_feedback
 
-from utils import thumbs_feedback, send_amplitude_data
+from utils import thumbs_feedback, send_amplitude_data, escape_dollars_outside_latex
 
 
 max_examples = 6
@@ -31,6 +31,12 @@ def isTrue(x) -> bool:
     return x.strip().lower() == 'true'
 
 def launch_bot():
+    def reset():
+        st.session_state.messages = [{"role": "assistant", "content": "How may I help you?"}]
+        st.session_state.ex_prompt = None
+        st.session_state.first_turn = True
+
+
     def generate_response(question):
         response = vq.submit_query(question, languages[st.session_state.language])
         return response
@@ -83,8 +89,15 @@ def launch_bot():
         cfg.language = st.selectbox('Language:', languages.keys())
         if st.session_state.language != cfg.language:
             st.session_state.language = cfg.language
-            print(f"DEBUG: Language changed to {st.session_state.language}")
+            reset()
             st.rerun()
+
+        st.markdown("\n")
+        bc1, _ = st.columns([1, 1])
+        with bc1:
+            if st.button('Start Over'):
+                reset()
+                st.rerun()
 
         st.markdown("---")
         st.markdown(
@@ -99,7 +112,7 @@ def launch_bot():
     st.markdown(f"<center> <h2> Vectara AI Assistant: {cfg.title} </h2> </center>", unsafe_allow_html=True)
 
     if "messages" not in st.session_state.keys():
-        st.session_state.messages = [{"role": "assistant", "content": "How may I help you?"}]
+        reset()
                 
     # Display chat messages
     for message in st.session_state.messages:
@@ -128,11 +141,13 @@ def launch_bot():
         with st.chat_message("assistant"):
             if cfg.streaming:
                 stream = generate_streaming_response(prompt)
-                response = st.write_stream(stream) 
+                response = st.write_stream(stream)
             else:
                 with st.spinner("Thinking..."):
                     response = generate_response(prompt)
                     st.write(response)
+
+            response = escape_dollars_outside_latex(response)
             message = {"role": "assistant", "content": response}
             st.session_state.messages.append(message)
 

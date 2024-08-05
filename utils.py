@@ -1,6 +1,7 @@
 import os
 import requests
 import json
+import re
 
 import streamlit as st
 
@@ -45,3 +46,23 @@ def send_amplitude_data(user_query, chat_response, demo_name, language, feedback
     response = requests.post('https://api2.amplitude.com/2/httpapi', headers=headers, data=json.dumps(data))
     if response.status_code != 200:
         print(f"Amplitude request failed with status code {response.status_code}. Response Text: {response.text}")
+
+def escape_dollars_outside_latex(text):
+    # Define a regex pattern to find LaTeX equations (either single $ or double $$)
+    pattern = re.compile(r'(\$\$.*?\$\$|\$.*?\$)')
+    latex_matches = pattern.findall(text)
+    
+    # Placeholder to temporarily store LaTeX equations
+    placeholders = {}
+    for i, match in enumerate(latex_matches):
+        placeholder = f'__LATEX_PLACEHOLDER_{i}__'
+        placeholders[placeholder] = match
+        text = text.replace(match, placeholder)
+    
+    # Escape dollar signs in the rest of the text
+    text = text.replace('$', '\\$')
+    
+    # Replace placeholders with the original LaTeX equations
+    for placeholder, original in placeholders.items():
+        text = text.replace(placeholder, original)
+    return text
