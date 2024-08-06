@@ -143,12 +143,13 @@ def launch_bot():
             if cfg.streaming:
                 stream = generate_streaming_response(prompt)
                 response = st.write_stream(stream)
+                response = escape_dollars_outside_latex(response)
             else:
                 with st.spinner("Thinking..."):
                     response = generate_response(prompt)
+                    response = escape_dollars_outside_latex(response)
                     st.write(response)
 
-            response = escape_dollars_outside_latex(response)
             message = {"role": "assistant", "content": response}
             st.session_state.messages.append(message)
 
