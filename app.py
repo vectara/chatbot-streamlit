@@ -123,6 +123,7 @@ def launch_bot():
     with example_container:
         if show_example_questions():
             example_container.empty()
+            st.session_state.first_turn = False
             st.rerun()
 
     # select prompt from example question or user provided input
