@@ -123,6 +123,7 @@ def launch_bot():
     with example_container:
         if show_example_questions():
             example_container.empty()
+            st.session_state.first_turn = False
             st.rerun()
 
     # select prompt from example question or user provided input
@@ -142,12 +143,13 @@ def launch_bot():
             if cfg.streaming:
                 stream = generate_streaming_response(prompt)
                 response = st.write_stream(stream)
+                response = escape_dollars_outside_latex(response)
             else:
                 with st.spinner("Thinking..."):
                     response = generate_response(prompt)
+                    response = escape_dollars_outside_latex(response)
                     st.write(response)
 
-            response = escape_dollars_outside_latex(response)
             message = {"role": "assistant", "content": response}
             st.session_state.messages.append(message)
 
