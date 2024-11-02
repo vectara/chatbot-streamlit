@@ -32,20 +32,30 @@ class VectaraQuery():
                 },
                 'reranker':
                 {
-                    'type': 'customer_reranker',
-		        'reranker_id': 'rnk_272725719'
+                    "type": "chain",
+                    "rerankers": [
+                        {
+                            "type": "customer_reranker",
+                            "reranker_name": "Rerank_Multilingual_v1"
+                        },
+                        {
+                            "type": "mmr",
+                            "diversity_bias": 0.05
+                        }
+                    ]
                 },
             },
             'generation':
             {
-                'prompt_name': self.prompt_name,
-                'max_used_search_results': 10,
+                'generation_preset_name': self.prompt_name,
+                'max_used_search_results': 7,
                 'response_language': response_lang,
                 'citations':
                 {
-                    'style': 'none'
+                    'style': 'markdown',
+                    'url_pattern': '{doc.url}'
                 },
-                'enable_factual_consistency_score': False
+                'enable_factual_consistency_score': True
             },
             'chat':
             {
@@ -79,7 +89,6 @@ class VectaraQuery():
             endpoint = "https://api.vectara.io/v2/chats"
 
         body = self.get_body(query_str, language, stream=False)
-
         response = requests.post(endpoint, data=json.dumps(body), verify=True, headers=self.get_headers())
 
         if response.status_code != 200:
@@ -125,5 +134,7 @@ class VectaraQuery():
                         chunk = line['generation_chunk']
                         chunks.append(chunk)
                         yield chunk
+                    elif line['type'] == 'chat_info':
+                        self.conv_id = line['chat_id']
 
         return ''.join(chunks)
