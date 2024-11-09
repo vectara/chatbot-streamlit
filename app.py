@@ -10,6 +10,8 @@ from streamlit_feedback import streamlit_feedback
 
 from utils import thumbs_feedback, send_amplitude_data, escape_dollars_outside_latex
 
+from dotenv import load_dotenv
+load_dotenv(override=True)
 
 max_examples = 6
 languages = {'English': 'eng', 'Spanish': 'spa', 'French': 'fra', 'Chinese': 'zho', 'German': 'deu', 'Hindi': 'hin', 'Arabic': 'ara',
@@ -32,7 +34,7 @@ def isTrue(x) -> bool:
 
 def launch_bot():
     def reset():
-        st.session_state.messages = [{"role": "assistant", "content": "How may I help you?"}]
+        st.session_state.messages = [{"role": "assistant", "content": "How may I help you?", "avatar": '🤖'}]
         st.session_state.ex_prompt = None
         st.session_state.first_turn = True
 
@@ -84,7 +86,7 @@ def launch_bot():
         image = Image.open('Vectara-logo.png')
         st.image(image, width=175)
         st.markdown(f"## About\n\n"
-                    f"This demo uses Retrieval Augmented Generation to ask questions about {cfg.source_data_desc}\n")
+                    f"This demo uses Vectara RAG to ask questions about {cfg.source_data_desc}\n")
         
         cfg.language = st.selectbox('Language:', languages.keys())
         if st.session_state.language != cfg.language:
@@ -103,11 +105,8 @@ def launch_bot():
         st.markdown(
             "## How this works?\n"
             "This app was built with [Vectara](https://vectara.com).\n"
-            "Vectara's [Indexing API](https://docs.vectara.com/docs/api-reference/indexing-apis/indexing) was used to ingest the data into a Vectara corpus (or index).\n\n"
             "This app uses Vectara [Chat API](https://docs.vectara.com/docs/console-ui/vectara-chat-overview) to query the corpus and present the results to you, answering your question.\n\n"
-        )
-        st.markdown("---")
-        
+        )       
 
     st.markdown(f"<center> <h2> Vectara AI Assistant: {cfg.title} </h2> </center>", unsafe_allow_html=True)
 
@@ -116,7 +115,7 @@ def launch_bot():
                 
     # Display chat messages
     for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
+        with st.chat_message(message["role"], avatar=message["avatar"]):
             st.write(message["content"])
 
     example_container = st.empty()
@@ -131,14 +130,14 @@ def launch_bot():
     else:
         prompt = st.chat_input()
     if prompt:
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
+        st.session_state.messages.append({"role": "user", "content": prompt, "avatar": '🧑‍💻'})
+        with st.chat_message("user", avatar="🧑‍💻"):
             st.write(prompt)
         st.session_state.ex_prompt = None
         
     # Generate a new response if last message is not from assistant
     if st.session_state.messages[-1]["role"] != "assistant":
-        with st.chat_message("assistant"):
+        with st.chat_message("assistant", avatar="🤖"):
             if cfg.streaming:
                 stream = generate_streaming_response(prompt)
                 response = st.write_stream(stream)
@@ -148,7 +147,7 @@ def launch_bot():
                     st.write(response)
 
             response = escape_dollars_outside_latex(response)
-            message = {"role": "assistant", "content": response}
+            message = {"role": "assistant", "content": response, "avatar": '🤖'}
             st.session_state.messages.append(message)
 
             # Send query and response to Amplitude Analytics

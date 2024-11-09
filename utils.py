@@ -25,9 +25,11 @@ def thumbs_feedback(feedback, **kwargs):
     st.session_state.feedback_key += 1
 
 def send_amplitude_data(user_query, chat_response, demo_name, language, feedback=None):
-    # Send query and response to Amplitude Analytics
+    amplitude_api_key = os.getenv('AMPLITUDE_TOKEN')
+    if not amplitude_api_key:
+        return
     data = {
-        "api_key": os.getenv('AMPLITUDE_TOKEN'),
+        "api_key": amplitude_api_key,
         "events": [{
             "device_id": st.session_state.device_id,
             "event_type": "submitted_query",
